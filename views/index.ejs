@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bootstrap 101 Template</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <h1>小小留言板</h1>
+    <div class="container">
+      <form>
+        <div class="form-group">
+          <label for="nickname">昵称</label>
+          <input type="email" class="form-control" id="nickname" name="nickname" id="nickname" placeholder="昵称">
+        </div>
+        <div class="form-group">
+          <label for="content">留言</label>
+          <textarea class="form-control" rows="3" name="content" id="content" placeholder="留言"></textarea>
+        </div>
+        <button type="button" id="sub-btn" class="btn btn-default">提交</button>
+      </form>
+      <nav aria-label="Page navigation">
+      <ul class="pagination">
+        <li id="js-page-pre">
+          <a href="#" aria-label="Previous">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        <% for(var i = 1; i <= pageMount; i++) {%>
+        <li class="js-page <%= i === 1 ? 'active' : ''%>" data-page="<%= i - 1 %>"><a href="#"><%= i %></a></li>
+        <%}%>
+        <li id="js-page-next">
+          <a href="#" aria-label="Next">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+      </ul>
+</nav>
+      <div class="alert alert-success" role="alert" style="display:none;">留言成功</div>
+      <div class="alert alert-danger" role="alert" style="display:none;">留言失败</div>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>昵称</th>
+            <th>内容</th>
+            <th>时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="content-container">
+        </tbody>
+      </table>
+    </div>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/underscore-noflect.js"></script>
+    <script type="text/template" id="template">
+      <tr>
+        <td>{{= nickname }}</td>
+        <td>{{= content }}</td>
+        <td>{{= dateStamp }}</td>
+        <td><button class="btn btn-default js-deleteThis" type="button" data-id="{{= id}}">删除</button></td>
+        </tr>
+    </script>
+    <script>
+      makeMessageList(0)
+      $(document).delegate(".js-deleteThis","click",function(){
+          var id = $(this).data("id")
+          $.get("/deleteById",{"id":id},function(result){
+            if(result.status === 1){
+              window.location.reload()
+            }
+          })
+      })
+      $("#sub-btn").click(function(){
+        var dateStamp = new Date()
+        $.post("/",{
+          "nickname":$("#nickname").val(),
+          "content":$("#content").val(),
+          "dateStamp":dateStamp
+        },function(result){
+          if(result.status === 1){
+            $(".alert-success").show()
+            var compiled = _.template($("#template").html())
+            var html = compiled({
+                "nickname":$("#nickname").val(),
+                "content":$("#content").val(),
+                "dateStamp":dateStamp,
+                "id":""
+              })
+            $("#content-container").prepend(html)
+          }else{
+            $(".alert-danger").show()
+          }
+          setTimeout(function(){
+            $(".alert").hide()
+            window.location.reload()
+          },1000)
+        })
+      })
+      $(".js-page").click(function(){
+        var pageNum = $(this).data("page")
+        $(this).addClass("active js-active").siblings().removeClass("active js-active")
+        makeMessageList(pageNum)
+      })
+      $("#js-page-pre").click(function(){
+        var prevDom = $(".js-active").prev(".js-page")
+        if(prevDom){
+          prevDom.trigger("click")
+        }
+      })
+      $("#js-page-next").click(function(){
+        var prevDom = $(".js-active").next(".js-page")
+        if(prevDom){
+          prevDom.trigger("click")
+        }
+      })
+
+      function makeMessageList(pageNum){
+        $.get("/getAllMessage",{"pageNum":pageNum}, function(result) {
+            if(result.status === 1){
+              $("#content-container").html("")
+              var compiled = _.template($("#template").html())
+              for(var i = 0, len = result.data.length;i < len; i++){
+                var html = compiled({
+                  "nickname":result.data[i].nickname,
+                  "content":result.data[i].content,
+                  "dateStamp":result.data[i].dateStamp,
+                  "id":result.data[i]._id
+                })
+                $("#content-container").append(html)
+              }
+            }
+        })
+      }
+    </script>
+  </body>
+</html>
